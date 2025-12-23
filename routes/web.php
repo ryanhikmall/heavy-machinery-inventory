@@ -10,50 +10,47 @@ use App\Http\Controllers\AuthController;
 
 /*
 |--------------------------------------------------------------------------
-| 1. RUTE PUBLIC (LOGIN & LOGOUT)
+| 1. RUTE PUBLIC
 |--------------------------------------------------------------------------
 */
-
-// Middleware 'guest' artinya: Kalau sudah login, jangan boleh masuk sini (tendang ke dashboard)
 Route::middleware(['guest'])->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 });
 
-// Logout harus bisa diakses oleh orang yang sedang login (auth)
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
 /*
 |--------------------------------------------------------------------------
-| 2. RUTE USER / STAFF (Bisa Diakses Semua User Login)
+| 2. RUTE TERAUTENTIKASI
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth'])->group(function () {
     
-    // --> INI LOGIKA DIRECT LOGIN <--
-    // Karena ada di dalam middleware 'auth', user yang belum login otomatis dilempar ke login
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
+    // =================================================================
+    // PENTING: RUTE KHUSUS (ADMIN/CREATE/EDIT) HARUS DI ATAS RUTE 'SHOW'
+    // =================================================================
+    
+    // 1. Rute Admin (Create, Store, Edit, Update, Destroy)
+    // Ditaruh di atas agar "spareparts/create" dicek duluan sebelum "spareparts/{id}"
+    Route::middleware(['is_admin'])->group(function () {
+        Route::resource('categories', CategoryController::class)->except(['index']);
+        Route::resource('units', UnitController::class)->except(['index']);
+        
+        // Admin punya akses penuh (kecuali index & show yang sudah dihandle di bawah)
+        // Tapi create & edit akan didefinisikan di sini
+        Route::resource('spareparts', SparepartController::class)->except(['index', 'show']);
+    });
+
+    // 2. Rute User Biasa / Umum (Index & Show)
+    // Ditaruh di bawah. Jika URL bukan 'create' atau 'edit', baru masuk sini (dianggap ID)
     Route::resource('categories', CategoryController::class)->only(['index']);
     Route::resource('units', UnitController::class)->only(['index']);
-
-    // Semua user boleh lihat daftar sparepart & input transaksi
-    Route::resource('spareparts', SparepartController::class)->only(['index', 'show']);
-    Route::resource('transactions', TransactionController::class);
-});
-
-/*
-|--------------------------------------------------------------------------
-| 3. RUTE KHUSUS ADMIN (Full Akses Master Data)
-|--------------------------------------------------------------------------
-*/
-// Gabungan 'auth' DAN 'is_admin'
-Route::middleware(['auth', 'is_admin'])->group(function () {
     
-    // Admin bisa CRUD Master Data (Kategori & Unit)
-  Route::resource('categories', CategoryController::class)->except(['index']);
-    Route::resource('units', UnitController::class)->except(['index']);
+    Route::resource('spareparts', SparepartController::class)->only(['index', 'show']);
+    
+    Route::resource('transactions', TransactionController::class);
 
-    // Admin bisa Create/Edit/Delete Sparepart (User biasa cuma index/lihat)
-    Route::resource('spareparts', SparepartController::class)->except(['index', 'show']);
 });
