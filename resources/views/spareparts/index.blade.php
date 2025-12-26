@@ -83,24 +83,29 @@
                             </div>
                         </td>
 
-                        <!-- Aksi -->
+                         <!-- Aksi -->
                         @if(Auth::user()->role === 'admin')
                         <td class="px-8 py-5 text-right">
                             <div class="inline-flex items-center justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
-                                <!-- Edit Button -->
-                                <a href="#" class="w-9 h-9 rounded-xl flex items-center justify-center text-amber-500 hover:bg-amber-50 hover:text-amber-600 transition-colors shadow-sm ring-1 ring-slate-100 bg-white" title="Edit Data">
+                                
+                                <!-- 1. EDIT BUTTON (Sudah diperbaiki) -->
+                                <a href="{{ route('spareparts.edit', $item->id) }}" 
+                                   class="w-9 h-9 rounded-xl flex items-center justify-center text-amber-500 hover:bg-amber-50 hover:text-amber-600 transition-colors shadow-sm ring-1 ring-slate-100 bg-white" 
+                                   title="Edit Data">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 
-                                <!-- Delete Button (Placeholder Form) -->
-                                {{-- 
-                                <form action="{{ route('spareparts.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Hapus barang ini?');">
-                                    @csrf @method('DELETE') 
-                                --}}
-                                <button type="button" class="w-9 h-9 rounded-xl flex items-center justify-center text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors shadow-sm ring-1 ring-slate-100 bg-white" title="Hapus Data">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                                {{-- </form> --}}
+                                <!-- 2. DELETE BUTTON (Sudah di-uncomment & diperbaiki) -->
+                                <form action="{{ route('spareparts.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus barang {{ $item->name }}?');" class="inline-block">
+                                    @csrf 
+                                    @method('DELETE') 
+                                    <button type="submit" 
+                                            class="w-9 h-9 rounded-xl flex items-center justify-center text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors shadow-sm ring-1 ring-slate-100 bg-white" 
+                                            title="Hapus Data">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+
                             </div>
                         </td>
                         @endif
