@@ -43,6 +43,9 @@
         .animate-blob { animation: blob 10s infinite; }
         .animation-delay-2000 { animation-delay: 2s; }
         .animation-delay-4000 { animation-delay: 4s; }
+        
+        /* Hide element initially to prevent flicker with Alpine.js */
+        [x-cloak] { display: none !important; }
     </style>
 </head>
 <body class="text-slate-600 relative bg-slate-50" x-data="{ sidebarOpen: false }">
@@ -173,49 +176,73 @@
             <div class="flex items-center gap-4">
                 @auth
                 <div class="relative" x-data="{ open: false }" @click.away="open = false">
-                    <!-- Tombol Lonceng -->
-                    <button @click="open = !open" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-white/50 transition-all relative">
-                        <i class="fas fa-bell"></i>
-                        @if(auth()->user()->unreadNotifications->count() > 0)
-                            <span class="absolute top-2.5 right-3 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white animate-pulse"></span>
+                    
+                    <!-- 1. Tombol Lonceng -->
+                    <button @click="open = !open" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-white/50 transition-all relative outline-none focus:outline-none">
+                        <i class="fas fa-bell text-lg"></i>
+                        
+                        <!-- Indikator Merah (Hanya jika ada unread) -->
+                        @if(auth()->user()->unreadNotifications && auth()->user()->unreadNotifications->count() > 0)
+                            <span class="absolute top-2 right-2.5 flex h-2.5 w-2.5">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border border-white"></span>
+                            </span>
                         @endif
                     </button>
 
-                    <!-- Dropdown Notifikasi -->
+                    <!-- 2. Dropdown Notifikasi -->
                     <div x-show="open" 
                          x-transition:enter="transition ease-out duration-200"
                          x-transition:enter-start="opacity-0 translate-y-2"
                          x-transition:enter-end="opacity-100 translate-y-0"
-                         class="absolute right-0 mt-3 w-80 bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 ring-1 ring-black/5 overflow-hidden z-50">
+                         x-cloak
+                         class="absolute right-0 mt-3 w-80 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 ring-1 ring-black/5 overflow-hidden z-[100]">
                         
-                        <div class="px-4 py-3 border-b border-slate-100/50 bg-slate-50/50 flex justify-between items-center">
+                        <!-- Header Dropdown -->
+                        <div class="px-4 py-3 border-b border-slate-100/50 bg-slate-50/80 flex justify-between items-center">
                             <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Notifikasi</span>
                             @if(auth()->user()->unreadNotifications->count() > 0)
                                 <span class="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">{{ auth()->user()->unreadNotifications->count() }} Baru</span>
                             @endif
                         </div>
 
-                        <div class="max-h-64 overflow-y-auto">
+                        <!-- List Notifikasi -->
+                        <div class="max-h-80 overflow-y-auto">
                             @forelse(auth()->user()->unreadNotifications as $notification)
-                                <a href="{{ $notification->data['url'] ?? '#' }}" class="block px-4 py-3 hover:bg-indigo-50/50 transition-colors border-b border-slate-100/50 last:border-0">
+                                <!-- LOGIC PENTING: Link mengarah ke route 'notifications.read' agar ditandai READ saat diklik -->
+                                <a href="{{ route('notifications.read', $notification->id) }}" class="block px-4 py-3 hover:bg-indigo-50/50 transition-colors border-b border-slate-100/50 last:border-0 group">
                                     <div class="flex items-start gap-3">
-                                        <div class="p-2 bg-amber-100 text-amber-600 rounded-full shrink-0">
+                                        <div class="p-2 bg-amber-100 text-amber-600 rounded-full shrink-0 group-hover:bg-amber-200 transition-colors">
                                             <i class="{{ $notification->data['icon'] ?? 'fas fa-info-circle' }} text-xs"></i>
                                         </div>
-                                        <div>
-                                            <p class="text-sm font-bold text-slate-700">{{ $notification->data['title'] }}</p>
-                                            <p class="text-xs text-slate-500 mt-0.5">{{ $notification->data['message'] }}</p>
-                                            <p class="text-[10px] text-slate-400 mt-1">{{ $notification->created_at->diffForHumans() }}</p>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-bold text-slate-700 truncate">{{ $notification->data['title'] }}</p>
+                                            <p class="text-xs text-slate-500 mt-0.5 line-clamp-2">{{ $notification->data['message'] }}</p>
+                                            <p class="text-[10px] text-slate-400 mt-1 font-mono">{{ $notification->created_at->diffForHumans() }}</p>
                                         </div>
                                     </div>
                                 </a>
                             @empty
-                                <div class="px-4 py-6 text-center text-slate-400">
-                                    <i class="fas fa-bell-slash text-2xl mb-2 opacity-50"></i>
-                                    <p class="text-xs">Tidak ada notifikasi baru.</p>
+                                <div class="px-4 py-8 text-center text-slate-400 flex flex-col items-center justify-center">
+                                    <div class="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-2">
+                                        <i class="fas fa-bell-slash text-xl opacity-40"></i>
+                                    </div>
+                                    <p class="text-xs font-medium">Tidak ada notifikasi baru.</p>
                                 </div>
                             @endforelse
                         </div>
+                        
+                        <!-- LOGIC PENTING: Tombol Tandai Semua Sudah Dibaca (POST Form) -->
+                        @if(auth()->user()->unreadNotifications->count() > 0)
+                        <div class="bg-slate-50/80 border-t border-slate-100/50 p-2 text-center">
+                            <form action="{{ route('notifications.readAll') }}" method="POST">
+                                @csrf
+                                <button type="submit" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors uppercase tracking-wider w-full py-1 hover:bg-indigo-50 rounded">
+                                    Tandai Semua Sudah Dibaca
+                                </button>
+                            </form>
+                        </div>
+                        @endif
                     </div>
                 </div>
                 @endauth
